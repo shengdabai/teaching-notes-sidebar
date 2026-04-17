@@ -1,109 +1,174 @@
-# Chinese Teaching Note Side Panel
+# Chinese Teaching Note Builder
+## 中文教学笔记生成器
 
-Browser extension for generating structured Chinese teaching notes with Gemini in a Chrome side panel.
+A Chrome extension that uses AI to generate Chinese teaching notes with pinyin, translations, and pedagogical explanations. Perfect for language teachers and students.
 
-## Features
+Chrome 扩展程序，使用 AI 生成带拼音、翻译和教学解析的中文笔记。适用于语言教师和学生。
 
-- Side panel workflow for A/B/C Chinese teaching notes
-- **Dual AI provider support**: DeepSeek (no VPN needed) and Google Gemini
-- Compact UI with dropdown level selector — results visible without scrolling
-- Editable generated note lines with copy icons
-- Copy Line 2, Copy Line 3, Copy All (with error handling)
-- Markdown export with timestamped filenames
-- Local draft list (max 50) saved in browser storage
-- Built-in teaching-style extension icons
-- Loading state with disabled button during generation
-- Debounced UI state persistence for smooth typing
-- 30-second API request timeout
-- Dark mode support via `prefers-color-scheme`
-- CSS custom property design token system
-- Fluid typography and spacing with `clamp()`
-- 44px minimum touch targets for all interactive elements
-- Full ARIA support: aria-labels, focus-visible
-- Empty/safety-filtered response handling
+## Features 功能
 
-## Level Rules
+### 🎯 Core Functionality 核心功能
+- **AI-Powered Notes**: Generate teaching notes using multiple AI providers (DeepSeek, ChatGPT, Claude, Gemini, etc.)
+- **Multiple Output Formats**: Three difficulty levels with different pinyin integration
+- **Smart Prompting**: Automatically constructs pedagogically effective prompts
+- **Floating Panel**: Injected panel that works on any webpage
+- **Persistent Storage**: Auto-save notes with metadata
+- **Export Capabilities**: Export notes as Markdown files
 
-- `A`: Line 2 contains tone-marked pinyin only
-- `B`: Line 2 contains Chinese grouped by meaning with pinyin attached to each phrase group
-- `C`: Line 2 contains Chinese only
+### 📚 Output Levels 输出级别
+- **Level A**: Pinyin only (e.g., `wǒ hěn hǎo`)
+- **Level B**: Chinese + Pinyin grouped by meaning (e.g., `很好hěn hǎo 学习xuéxí`)
+- **Level C**: Chinese characters only (e.g., `很好 学习`)
 
-Line 3 always contains a natural English translation plus a short teaching note.
+### 🤖 AI Providers 支持的 AI 服务
+- DeepSeek (Default)
+- OpenAI ChatGPT
+- Anthropic Claude
+- Google Gemini
+- 月之暗面 Kimi
+- 智谱 GLM
+- 通义千问 Qwen
+- Minimax
+- Custom endpoints
 
-## Install
+## Installation 安装
 
-1. Open `chrome://extensions/`
-2. Turn on `Developer mode`
-3. Click `Load unpacked`
-4. Select the project folder
+### From Chrome Web Store 从应用商店安装
+1. Visit the [Chrome Web Store](https://chrome.google.com/webstore/detail/chinese-teaching-note-builder)
+2. Click "Add to Chrome"
+3. Pin the extension for easy access
 
-## First-time Setup
+### From GitHub 从 GitHub 安装
+1. Download or clone this repository
+2. Open Chrome and navigate to `chrome://extensions`
+3. Enable "Developer mode" in the top right
+4. Click "Load unpacked" and select the extension directory
+5. Pin the extension for easy access
 
-1. Open the extension
-2. If no API key is saved yet, the extension opens the settings page automatically
-3. Choose a provider: **DeepSeek** (no VPN needed) or **Google Gemini**
-4. Add your API key
-5. Choose a model (deepseek-chat, gemini-2.5-flash, or gemini-2.5-pro)
-6. Click `Save Settings`
-7. Use `Cancel` to discard unsaved changes and restore the last saved settings
+## Usage 使用指南
 
-## Usage
+### Using the Side Panel 使用侧边栏
+1. Click the extension icon in your browser toolbar
+2. Type or paste Chinese text in the input field
+3. Select your desired difficulty level (A, B, or C)
+4. Press Enter or click the generate button
+5. The AI will generate:
+   - Line 2: Teaching notes according to your level selection
+   - Line 3: English translation with usage notes
+6. Use the copy buttons to copy individual lines or everything
+7. Export your notes as Markdown via the export button
 
-1. Open the side panel from the extension action
-2. Enter one Chinese sentence
-3. Select `A`, `B`, or `C`
-4. Click `Generate Note`
-5. Edit Line 2 and Line 3 if needed
-6. Copy individual lines, copy both lines, export Markdown, or save to drafts
-7. The extension remembers the last input text and selected level locally
+### Using the Floating Panel 使用浮动面板
+1. Click the extension icon to open the floating panel on any webpage
+2. The panel can be:
+   - **Dragged** by the title bar
+   - **Resized** using the corner and edge handles
+3. Enter Chinese text and generate notes as above
+4. Notes are automatically saved to local storage
 
-## Copy and Export Rules
+### Settings Configuration 设置配置
+1. Right-click the extension icon and select "Options"
+2. Choose your AI provider
+3. Enter your API key
+4. Select a model (pre-configured for each provider)
+5. Optionally specify a custom endpoint
+6. Test your connection
+7. Save your settings
 
-- `Copy Line 2`: copies only Line 2
-- `Copy Line 3`: copies only Line 3
-- `Copy All`: copies only Line 2 and Line 3
-- `Export Markdown`: exports only Line 2 and Line 3
-
-Empty copy, draft save, and export actions are blocked with a clear status message.
-
-## Drafts
-
-- `Save to Draft`: saves the current Line 2 and Line 3 note locally (max 50 drafts)
-- `Reuse`: loads a saved draft back into the editor
-- `Export Markdown`: exports one draft as Markdown
-- `Delete`: removes a draft from local storage
-- Drafts are rendered newest first and show `Level`, saved time, source text, `line2`, and `line3`
-
-## Architecture
+## Project Structure 项目结构
 
 ```
-sidepanel.html / sidepanel.js   Main UI (input, generate, copy, drafts)
-settings.html / settings.js     AI provider, API key, and model configuration
-background.js                   Service worker (side panel behavior)
-lib/
-  clipboard.js                  Clipboard write helpers
-  llm-client.js                 Dual-provider LLM client (DeepSeek + Gemini)
-  markdown.js                   Copy-all and markdown formatting
-  prompt-builder.js             Level-aware prompt construction
-  response-parser.js            JSON response validation
-  storage.js                    Chrome storage (50-draft cap, provider settings)
-  validators.js                 Input and settings validation
+├── manifest.json              # Extension manifest
+├── sidepanel.html            # Side panel interface
+├── settings.html             # Settings page
+├── background.js             # Background service worker
+├── injected-panel.js        # Floating panel script
+├── settings.js               # Settings page logic
+├── sidepanel.js             # Side panel logic
+├── lib/                     # Core libraries
+│   ├── llm-client.js        # AI provider integration
+│   ├── storage.js           # Chrome storage utilities
+│   ├── prompt-builder.js    # Prompt construction
+│   ├── response-parser.js   # API response handling
+│   ├── validators.js        # Input validation
+│   ├── clipboard.js         # Clipboard operations
+│   └── markdown.js          # Markdown generation
+├── tests/                   # Test files
+│   ├── smoke.test.js        # Basic functionality tests
+│   ├── sidepanel.test.js    # Side panel specific tests
+│   ├── storage.test.js      # Storage system tests
+│   ├── settings.test.js     # Settings page tests
+│   └── content-formatting.test.js  # Content format tests
+├── vitest.config.js         # Test configuration
+└── package.json             # Project dependencies
 ```
 
-## Design System
+## API Endpoints API 端点
 
-- **Tokens**: CSS custom properties for colors, spacing, radii
-- **Theming**: Automatic dark mode via `prefers-color-scheme`
-- **Responsive**: Fluid sizing with `clamp()`, 44px touch targets
-- **Accessibility**: WCAG AA compliant focus indicators, ARIA roles and labels
+The extension supports the following AI providers with their default endpoints:
 
-## Chrome Debugging
+- **DeepSeek**: `https://api.deepseek.com/v1/chat/completions`
+- **OpenAI**: `https://api.openai.com/v1/chat/completions`
+- **Claude**: `https://api.anthropic.com/v1/messages`
+- **Gemini**: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
+- **GLM**: `https://open.bigmodel.cn/api/paas/v4/chat/completions`
+- **Kimi**: `https://api.moonshot.cn/v1/chat/completions`
+- **Qwen**: `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`
+- **Minimax**: `https://api.minimax.chat/v1/text/chatcompletion_v2`
 
-Use [chrome-debug-checklist.md](docs/chrome-debug-checklist.md) for real browser loading and Gemini API troubleshooting.
+## Development 开发
 
-## Development
+### Setup Environment 设置环境
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Run tests: `npm test`
+4. Load the extension in Chrome developer mode
 
+### Testing 测试
 ```bash
-npm install
+# Run all tests
 npm test
+
+# Run tests in watch mode
+npm run test:watch
 ```
+
+### Building 构建
+This extension uses standard Chrome extension development practices. No build step is required for development.
+
+## Privacy 隐私
+
+- All processing happens locally in your browser
+- Your API keys are stored securely in Chrome storage
+- No text is sent to any server except the AI provider you select
+- Generated notes are stored locally in your browser
+- Exported notes are downloaded as files to your computer
+
+## Support 支持
+
+### Common Issues 常见问题
+- **API Key Error**: Ensure your API key is valid and has the necessary permissions
+- **Empty Response**: Some models may return empty responses for certain inputs. Try rephrasing your Chinese text
+- **Connection Failed**: Check your internet connection and API endpoint configuration
+
+### Contributing 贡献
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+## License 许可证
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+### Version History 版本历史
+- **v2.1.0**: Added Google Gemini support, improved UI responsiveness
+- **v2.0.0**: Introduced floating panel with drag/resize functionality
+- **v1.0.0**: Initial release with side panel and basic AI integration
+
+### Special Thanks 特别感谢
+- Thanks to all AI providers for their powerful language models
+- Inspired by Chinese language teaching methodologies
