@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Chinese Teaching Note Builder",
+  "version": "2.1.0",
+  "description": "Generate Chinese teaching notes using AI.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.deepseek.com/*",
+    "https://api.minimax.chat/*",
+    "https://open.bigmodel.cn/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.moonshot.cn/*",
+    "https://dashscope.aliyuncs.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Toggle Teaching Note Builder"
+  },
+  "options_page": "settings.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

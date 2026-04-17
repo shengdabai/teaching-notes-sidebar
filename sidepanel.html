@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chinese Teaching Note Builder</title>
+    <link rel="stylesheet" href="./sidepanel.css" />
+  </head>
+  <body>
+    <main class="panel-shell">
+      <section class="panel-card">
+        <header class="hero">
+          <p class="eyebrow">Chinese Teaching</p>
+          <h1>Teaching Note Builder</h1>
+        </header>
+
+        <section class="block">
+          <label class="label" for="source-text">Input</label>
+          <div class="input-wrapper">
+            <textarea
+              id="source-text"
+              class="input-box"
+              placeholder="Type Chinese here, press Enter to generate"
+            ></textarea>
+            <button type="button" id="generate-button" class="generate-icon" aria-label="Generate" title="Press Enter to generate">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <section class="block compact">
+          <label class="label" for="level-select">Level</label>
+          <select id="level-select" class="level-dropdown">
+            <option value="A">A · Pinyin only</option>
+            <option value="B">B · Chinese + Pinyin</option>
+            <option value="C">C · Chinese only</option>
+          </select>
+        </section>
+
+        <section class="result-card compact">
+          <div class="result-head">
+            <span class="result-title">Note</span>
+            <button type="button" id="copy-line2" class="copy-icon-btn" aria-label="Copy Note" title="Copy Note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+          <textarea id="line2" class="result-box" readonly></textarea>
+        </section>
+
+        <section class="result-card compact">
+          <div class="result-head">
+            <span class="result-title">Explanation</span>
+            <button type="button" id="copy-line3" class="copy-icon-btn" aria-label="Copy Explanation" title="Copy Explanation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+          <textarea id="line3" class="result-box" readonly></textarea>
+        </section>
+
+        <section class="action-row">
+          <button type="button" id="copy-all" class="button secondary" aria-label="Copy All">Copy All</button>
+          <button type="button" id="export-notes" class="button secondary" aria-label="Export as Markdown" title="Export notes as markdown file">Export MD</button>
+        </section>
+
+        <p id="status" class="status" aria-live="polite"></p>
+
+        <footer class="footer-actions">
+          <button type="button" id="reset-button" class="icon-button" aria-label="Reset all fields">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+          <button type="button" id="open-settings" class="icon-button" aria-label="Open settings page">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </footer>
+      </section>
+    </main>
+
+    <script type="module" src="./sidepanel.js"></script>
+  </body>
+</html>

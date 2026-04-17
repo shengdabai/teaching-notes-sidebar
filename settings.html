@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teaching Note Settings</title>
+    <link rel="stylesheet" href="./settings.css" />
+  </head>
+  <body>
+    <main class="settings-shell">
+      <section class="settings-card">
+        <p class="eyebrow">AI Provider</p>
+        <h1>Extension Settings</h1>
+        <p class="intro">
+          Choose your AI provider, add an API key, and select a model for generating teaching notes.
+        </p>
+
+        <form id="settings-form" class="settings-form">
+          <label class="field-group" for="provider">
+            <span>Provider</span>
+            <select id="provider" name="provider">
+              <option value="deepseek">DeepSeek</option>
+              <option value="minimax">Minimax</option>
+              <option value="glm">GLM (智谱)</option>
+              <option value="chatgpt">ChatGPT (OpenAI)</option>
+              <option value="claude">Claude (Anthropic)</option>
+              <option value="kimi">Kimi (月之暗面)</option>
+              <option value="qwen">Qwen (通义千问)</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+
+          <label class="field-group" id="endpoint-group" for="endpoint">
+            <span>API Endpoint</span>
+            <input id="endpoint" name="endpoint" type="url" placeholder="Enter custom endpoint URL" autocomplete="off" />
+          </label>
+
+          <label class="field-group" id="model-group" for="model">
+            <span>Model</span>
+            <select id="model" name="model">
+              <option value="deepseek-chat">deepseek-chat</option>
+            </select>
+          </label>
+
+          <label class="field-group" for="api-key">
+            <span>API Key</span>
+            <input id="api-key" name="api-key" type="password" autocomplete="off" required />
+          </label>
+
+          <div class="button-row">
+            <button id="test-connection" type="button" class="button secondary">
+              Test Connection
+            </button>
+            <button id="cancel-button" type="button" class="button secondary">Cancel</button>
+            <button id="save-button" type="submit" class="button">Save Settings</button>
+          </div>
+        </form>
+
+        <p id="status" class="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script type="module" src="./settings.js"></script>
+  </body>
+</html>
