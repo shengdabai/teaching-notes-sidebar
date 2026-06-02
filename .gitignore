@@ -2,3 +2,8 @@ node_modules/
 node_modules.bak/
 .omc/
 .DS_Store
+sync.sh
+*.env
+.env*
+*.pem
+*.key
