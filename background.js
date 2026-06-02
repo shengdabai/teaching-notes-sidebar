@@ -1,4 +1,5 @@
 import { generateTeachingNote } from './lib/llm-client.js';
+import { buildPrompt } from './lib/prompt-builder.js';
 import { loadNotes, loadSettings, loadUiState, saveNote, saveUiState } from './lib/storage.js';
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -28,12 +29,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'generate':
       (async () => {
         try {
+          // The floating panel sends sourceText + level; build the prompt here so
+          // prompt logic lives only in lib/prompt-builder.js (single source of truth).
+          const prompt = msg.prompt || buildPrompt({ sourceText: msg.sourceText, level: msg.level });
           const result = await generateTeachingNote({
             provider: msg.provider,
             apiKey: msg.apiKey,
             model: msg.model,
-            prompt: msg.prompt,
-            endpoint: msg.endpoint
+            prompt,
+            endpoint: msg.endpoint,
+            level: msg.level
           });
           sendResponse(result);
         } catch (err) {

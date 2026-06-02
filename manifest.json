@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Chinese Teaching Note Builder",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Generate Chinese teaching notes using AI.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [

@@ -198,15 +198,6 @@
 
   function validateChinese(t) { return /[\u4e00-\u9fff]/.test(t); }
 
-  function buildPrompt(src, level) {
-    const rules = {
-      A: 'Line 2 must contain only tone-marked pinyin.',
-      B: 'Line 2 must group by meaning: Chinese+tone-marked pinyin together. Example: 经济jīngjì 发展fāzhǎn.',
-      C: 'Line 2 must contain only Chinese.'
-    };
-    return `Chinese note → JSON {"line2":"","line3":""}. Level: ${level}. ${rules[level]} Line3: natural English translation. Short phrases (1-4 chars): translation only. Longer: add structure/usage note, max 50 words. Write for students, no "teaching note" phrasing. Only JSON, no extra text. Source: ${src}`;
-  }
-
   async function onGenerate() {
     if (isGenerating) return;
     const text = sourceText.value.trim();
@@ -220,7 +211,7 @@
         chrome.runtime.sendMessage({
           action: 'generate', provider: settings.provider || 'deepseek',
           apiKey: settings.apiKey, model: settings.model,
-          prompt: buildPrompt(text, selectedLevel), endpoint: settings.endpoint
+          sourceText: text, level: selectedLevel, endpoint: settings.endpoint
         }, (resp) => { resp?.error ? reject(new Error(resp.error)) : resolve(resp); });
       });
       line2.value = result.line2; line3.value = result.line3;

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+      - name: Validate manifest version sync
+        run: |
+          MANIFEST_VER=$(node -e "console.log(require('./manifest.json').version)")
+          PKG_VER=$(node -e "console.log(require('./package.json').version)")
+          if [ "$MANIFEST_VER" != "$PKG_VER" ]; then
+            echo "Version mismatch: manifest=$MANIFEST_VER package=$PKG_VER"
+            exit 1
+          fi
+          echo "Versions match: $MANIFEST_VER"

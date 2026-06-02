@@ -1,7 +1,4 @@
 node_modules/
 node_modules.bak/
-.env
-.env.local
 .omc/
 .DS_Store
-*.log

@@ -100,7 +100,8 @@ async function onGenerate() {
       apiKey: settings.apiKey,
       model: settings.model,
       prompt,
-      endpoint: settings.endpoint
+      endpoint: settings.endpoint,
+      level: selectedLevel
     });
 
     renderLevel();
@@ -177,7 +178,7 @@ async function onExportMd() {
     lines.push('');
     lines.push(`**Explanation:** ${note.line3}`);
     lines.push('');
-    lines.push(`*Created: ${new Date(note.createdAt).toLocaleString()}*  |  *ID: ${note.id}]*`);
+    lines.push(`*Created: ${new Date(note.createdAt).toLocaleString()}*  |  *ID: ${note.id}*`);
     lines.push('');
     lines.push('---');
     lines.push('');

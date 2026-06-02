@@ -1,50 +1,50 @@
 import { describe, expect, test } from 'vitest';
-import { buildPrompt } from '../lib/prompt-builder.js';
-import { parseModelResponse } from '../lib/response-parser.js';
+import { buildPrompt, line2RulesByLevel, LEVELS } from '../lib/prompt-builder.js';
 
-describe('content formatting helpers', () => {
-  test('buildPrompt includes level-specific constraints', () => {
+describe('buildPrompt', () => {
+  test('returns a system + user pair', () => {
     const prompt = buildPrompt({ sourceText: '经济发展', level: 'B' });
-    expect(prompt).toContain('Chinese+tone-marked pinyin');
-    expect(prompt).toContain('max 50 words');
-    expect(prompt).toContain('Source: 经济发展');
-    expect(prompt).toContain('Only JSON');
+    expect(typeof prompt.system).toBe('string');
+    expect(typeof prompt.user).toBe('string');
   });
 
-  test('buildPrompt includes explanation clarity guidance', () => {
-    const prompt = buildPrompt({ sourceText: '经济发展', level: 'B' });
-    expect(prompt).toContain('max 50 words');
-    expect(prompt).toContain('no "teaching note"');
+  test('system prompt carries all three level rules', () => {
+    const { system } = buildPrompt({ sourceText: '北京', level: 'A' });
+    expect(system).toContain(line2RulesByLevel.A);
+    expect(system).toContain(line2RulesByLevel.B);
+    expect(system).toContain(line2RulesByLevel.C);
   });
 
-  test('parseModelResponse accepts valid line2 and line3 fields', () => {
-    expect(
-      parseModelResponse('{"line2":"经济jīngjì 发展fāzhǎn","line3":"Economic development."}')
-    ).toEqual({
-      line2: '经济jīngjì 发展fāzhǎn',
-      line3: 'Economic development.'
-    });
+  test('system prompt teaches per-word pinyin grouping, not per syllable', () => {
+    const { system } = buildPrompt({ sourceText: '北京', level: 'A' });
+    expect(system).toContain('never one syllable at a time');
+    // grouped examples, not split
+    expect(system).toContain('Běijīng');
+    expect(system).toContain('经济jīngjì');
   });
 
-  test('parseModelResponse rejects malformed payloads', () => {
-    expect(() => parseModelResponse('{"line2":"only"}')).toThrow('Invalid model response');
+  test('system prompt teaches context-correct readings for 多音字', () => {
+    const { system } = buildPrompt({ sourceText: '银行', level: 'A' });
+    expect(system).toContain('yínháng');
+    expect(system).toContain('xíng');
   });
 
-  test('parseModelResponse strips markdown code fences', () => {
-    expect(
-      parseModelResponse('```json\n{"line2":"你好","line3":"Hello."}\n```')
-    ).toEqual({
-      line2: '你好',
-      line3: 'Hello.'
-    });
+  test('line3 calibration is bounded and free of meta language', () => {
+    const { system } = buildPrompt({ sourceText: '经济发展', level: 'B' });
+    expect(system).toContain('just the translation');
+    expect(system).toContain('Hard limit 30 words');
+    expect(system).toContain('"teaching note"');
   });
 
-  test('parseModelResponse strips bare code fences', () => {
-    expect(
-      parseModelResponse('```\n{"line2":"你好","line3":"Hello."}\n```')
-    ).toEqual({
-      line2: '你好',
-      line3: 'Hello.'
-    });
+  test('user message states level, segmented boundaries, and source', () => {
+    const { user } = buildPrompt({ sourceText: '经济发展', level: 'B' });
+    expect(user).toContain('Level: B');
+    expect(user).toContain('Source: 经济发展');
+    // Intl.Segmenter splits 经济发展 into two words.
+    expect(user).toContain('经济 | 发展');
+  });
+
+  test('exposes the canonical level list', () => {
+    expect(LEVELS).toEqual(['A', 'B', 'C']);
   });
 });
