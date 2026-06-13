@@ -4,40 +4,43 @@ Chrome extension that turns Chinese text into leveled teaching notes (pinyin + E
 
 ## Business Context
 
-- **Category:** education product
-- **Audience:** learners, teachers, parents, and education operators who need a clearer learning or exam-prep workflow.
+- **Category:** security and governance tool
+- **Audience:** builders and operators who need safer repositories, cleaner handoffs, and repeatable security checks.
 - **Repository status:** Public repository. Keep examples, docs, and issues free of credentials, private data, and machine-specific paths.
 - **Topics:** ai, browser-extension, chinese, chrome-extension, deepseek, llm, manifest-v3, notes, pinyin, teaching
 
 ## What This Project Is For
 
 - Chrome extension that turns Chinese text into leveled teaching notes (pinyin + English) via 9 AI providers. MV3, BYO key.
-- Give users a concrete learning workflow instead of a loose collection of content.
-- Make progress, practice, review, or recommendation steps easier to repeat.
+- Find repository risks early without exposing secrets in reports.
+- Make security review repeatable across public and private codebases.
 
 ## Where It Fits
 
-This repository supports productized learning workflows: diagnostic input, guided practice, review loops, and a clearer handoff between learner, teacher, and software.
+This repository belongs in the trust-and-safety layer of the workbench: it helps make code, configuration, and public handoffs safer before they are reused or shown to clients.
 
 ## Technical Overview
 
 - **Primary language:** JavaScript
-- **Detected stack:** JavaScript, Node.js / JavaScript tooling
+- **Detected stack:** JavaScript, Node.js
 - **Default branch:** `main`
 - **Visibility:** `PUBLIC`
 - **License:** MIT License
 
 ## Repository Map
 
+- `docs`
+- `tests`
 - `LICENSE`
 - `README.md`
 - `SECURITY.md`
 - `background.js`
-- `docs`
 - `icons`
 - `injected-panel.js`
 - `lib`
-- `tests`
+- `manifest.json`
+- `package-lock.json`
+- `package.json`
 
 ## Quick Start
 
@@ -50,6 +53,7 @@ npm run test
 
 | Command | Purpose |
 |---|---|
+| `npm install` | Install project dependencies. |
 | `npm run test` | vitest run |
 
 ## Operating Notes
@@ -57,12 +61,12 @@ npm run test
 - Keep real credentials out of the repository. Use local environment files, GitHub repository secrets, or the deployment platform secret manager.
 - If a `.env.example` file exists, treat it as documentation only; never commit filled-in `.env` files.
 - Before publishing screenshots, demos, or client examples, remove private names, internal paths, account IDs, and API endpoints.
-- The `Repository Hygiene` workflow is intended as a lightweight guardrail, not a replacement for product-specific tests.
+- The `Repository Hygiene` workflow is a lightweight guardrail, not a replacement for product-specific tests.
 
 ## Delivery Checklist
 
 - [ ] README describes the user, business outcome, and operating boundary.
-- [ ] Setup or preview commands are current.
+- [ ] Setup or preview commands are current and do not rely on private machine state.
 - [ ] No real secrets, private user data, or machine-local state are tracked.
 - [ ] Screenshots, demos, or sample outputs are safe to share publicly when the repository is public.
 - [ ] Product-specific tests or smoke checks are documented before production use.
