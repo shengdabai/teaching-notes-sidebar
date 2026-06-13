@@ -4,20 +4,20 @@ Chrome extension that turns Chinese text into leveled teaching notes (pinyin + E
 
 ## Business Context
 
-- **Category:** security and governance tool
-- **Audience:** builders and operators who need safer repositories, cleaner handoffs, and repeatable security checks.
+- **Category:** education product
+- **Audience:** learners, teachers, parents, and education operators who need a clearer learning or exam-prep workflow.
 - **Repository status:** Public repository. Keep examples, docs, and issues free of credentials, private data, and machine-specific paths.
 - **Topics:** ai, browser-extension, chinese, chrome-extension, deepseek, llm, manifest-v3, notes, pinyin, teaching
 
 ## What This Project Is For
 
 - Chrome extension that turns Chinese text into leveled teaching notes (pinyin + English) via 9 AI providers. MV3, BYO key.
-- Find repository risks early without exposing secrets in reports.
-- Make security review repeatable across public and private codebases.
+- Give users a concrete learning workflow instead of a loose collection of content.
+- Make practice, feedback, review, or recommendation steps easier to repeat.
 
 ## Where It Fits
 
-This repository belongs in the trust-and-safety layer of the workbench: it helps make code, configuration, and public handoffs safer before they are reused or shown to clients.
+This repository supports productized learning workflows: diagnostic input, guided practice, review loops, and clearer handoff between learner, teacher, and software.
 
 ## Technical Overview
 
