@@ -27,18 +27,17 @@ describe('storage helpers', () => {
   });
 
   test('returns defaults when settings are empty', async () => {
-    chrome.storage.session.get.mockResolvedValue({});
     chrome.storage.local.get.mockResolvedValue({});
 
     await expect(loadSettings()).resolves.toEqual(defaultSettings);
   });
 
-  test('persists settings in session storage when available', async () => {
-    chrome.storage.session.set.mockResolvedValue();
+  test('persists settings in local storage (survives service worker restarts)', async () => {
+    chrome.storage.local.set.mockResolvedValue();
 
     await saveSettings({ provider: 'deepseek', apiKey: 'key', model: 'deepseek-chat', endpoint: '' });
 
-    expect(chrome.storage.session.set).toHaveBeenCalledWith({
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({
       settings: {
         provider: 'deepseek',
         apiKey: 'key',
@@ -46,7 +45,7 @@ describe('storage helpers', () => {
         endpoint: ''
       }
     });
-    expect(chrome.storage.local.set).not.toHaveBeenCalled();
+    expect(chrome.storage.session.set).not.toHaveBeenCalled();
   });
 
   test('prepends notes when saving', async () => {

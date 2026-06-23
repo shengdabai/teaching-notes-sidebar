@@ -62,7 +62,9 @@ chrome.action.onClicked.addListener(async (tab) => {
         target: { tabId: tab.id },
         files: ['injected-panel.js']
       });
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Script injection failed:', err.message);
+    }
     chrome.tabs.sendMessage(tab.id, { action: 'show-panel' });
     await chrome.storage.session.set({ panelVisible: true });
   }

@@ -140,7 +140,7 @@ describe('generateTeachingNote', () => {
     await generateTeachingNote({
       provider: 'claude',
       apiKey: 'sk-ant',
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       prompt: { system: 'S', user: 'U' },
       level: 'A'
     });

@@ -3,7 +3,10 @@
   "name": "Chinese Teaching Note Builder",
   "version": "2.2.0",
   "description": "Generate Chinese teaching notes using AI.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "sidePanel"],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
     "https://api.deepseek.com/*",
