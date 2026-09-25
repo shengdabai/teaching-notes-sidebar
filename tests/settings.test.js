@@ -64,6 +64,24 @@ describe('settings page', () => {
     expect(document.querySelector('#model').value).toBe('deepseek-chat');
   });
 
+  test('keeps saved custom endpoint on load', async () => {
+    loadSettings.mockResolvedValue({
+      provider: 'custom',
+      apiKey: 'existing-key',
+      model: 'gpt-4o',
+      endpoint: 'https://api.example.com/v1/chat/completions'
+    });
+
+    setupDOM();
+    const { initSettingsPage } = await import('../settings.js');
+    await initSettingsPage();
+
+    expect(document.querySelector('#provider').value).toBe('custom');
+    expect(document.querySelector('#endpoint').value).toBe(
+      'https://api.example.com/v1/chat/completions'
+    );
+  });
+
   test('saves settings on submit', async () => {
     loadSettings.mockResolvedValue({
       provider: 'deepseek',

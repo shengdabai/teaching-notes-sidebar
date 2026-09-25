@@ -1,8 +1,22 @@
 import { generateTeachingNote } from './lib/llm-client.js';
 import { loadNotes, loadSettings, loadUiState, saveNote, saveUiState } from './lib/storage.js';
 
+async function sendMessageToTab(tabId, message) {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, message, () => {
+      if (chrome.runtime.lastError) {
+        resolve(false);
+        return;
+      }
+      resolve(true);
+    });
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.session.set({ panelVisible: false });
+  if (chrome.storage?.session?.set) {
+    chrome.storage.session.set({ panelVisible: false });
+  }
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -45,20 +59,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.url?.startsWith('http')) return;
+  if (!tab.id) {
+    chrome.runtime.openOptionsPage().catch(() => {});
+    return;
+  }
 
-  const storage = await chrome.storage.session.get('panelVisible');
-  if (storage.panelVisible) {
-    chrome.tabs.sendMessage(tab.id, { action: 'hide-panel' });
-    await chrome.storage.session.set({ panelVisible: false });
-  } else {
-    try {
+  if (!tab.url?.startsWith('http')) {
+    chrome.runtime.openOptionsPage().catch(() => {});
+    return;
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['injected-panel.js']
+    });
+    const shown = await sendMessageToTab(tab.id, { action: 'show-panel' });
+    if (!shown) {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ['injected-panel.js']
       });
-    } catch (_) {}
-    chrome.tabs.sendMessage(tab.id, { action: 'show-panel' });
-    await chrome.storage.session.set({ panelVisible: true });
-  }
+      await sendMessageToTab(tab.id, { action: 'show-panel' });
+    }
+    return;
+  } catch (_) {}
+
+  chrome.runtime.openOptionsPage().catch(() => {});
 });

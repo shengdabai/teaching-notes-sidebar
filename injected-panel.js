@@ -92,8 +92,8 @@
   --tn-text-label:#7aaad0;--tn-error:#ef6b6b;--tn-success:#4ec47d;
   --tn-shadow:rgba(0,0,0,0.4);
 }}
-.tn-panel{position:fixed;z-index:2147483647;width:280px;height:420px;
-  min-width:200px;min-height:200px;max-width:600px;max-height:90vh;
+.tn-panel{position:fixed;z-index:2147483647;width:180px;height:260px;
+  min-width:120px;min-height:90px;max-width:480px;max-height:80vh;
   background:var(--tn-surface);border:1px solid var(--tn-border);
   border-radius:var(--tn-radius);box-shadow:0 8px 32px var(--tn-shadow);
   display:none;flex-direction:column;font-family:var(--tn-font);
@@ -313,8 +313,8 @@
     if (!rDir) return;
     const dx = e.clientX - rSX, dy = e.clientY - rSY;
     let nw = rSW, nh = rSH;
-    if (rDir === 'r' || rDir === 'br') nw = Math.max(200, Math.min(600, rSW + dx));
-    if (rDir === 'b' || rDir === 'br') nh = Math.max(200, Math.min(window.innerHeight, rSH + dy));
+    if (rDir === 'r' || rDir === 'br') nw = Math.max(120, Math.min(480, rSW + dx));
+    if (rDir === 'b' || rDir === 'br') nh = Math.max(90, Math.min(window.innerHeight, rSH + dy));
     panel.style.width = nw + 'px'; panel.style.height = nh + 'px';
   }
   function endResize() { rDir = null; document.removeEventListener('mousemove', onResize); document.removeEventListener('mouseup', endResize); }
