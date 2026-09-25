@@ -36,7 +36,6 @@ This repository supports productized learning workflows: diagnostic input, guide
 - `SECURITY.md`
 - `background.js`
 - `icons`
-- `injected-panel.js`
 - `lib`
 - `manifest.json`
 - `package-lock.json`
@@ -126,7 +125,7 @@ MIT — see the [LICENSE](LICENSE) file.
 
 ### 🧱 技术栈
 
-- **Manifest V3** Chrome 扩展 —— service worker 后台、`chrome.scripting` 注入、侧边栏
+- **Manifest V3** Chrome 扩展 —— service worker 后台、扩展自有侧边栏(不向网页注入任何界面)
 - **原生 JS(ES Modules)** —— 无框架、无构建步骤;prompt 逻辑统一收敛在 `lib/`
 - **Vitest + jsdom** 测试
 - **GitHub Actions** CI —— 跑测试套件,并校验 `package.json` 与 `manifest.json` 版本同步
@@ -151,7 +150,7 @@ MIT — see the [LICENSE](LICENSE) file.
 
 ### 🗺️ 状态
 
-活跃维护,我自己每天教学在用。当前版本 **2.2.0**(`package.json` 与 `manifest.json` 版本保持同步)。
+活跃维护,我自己每天教学在用。当前版本 **2.3.0**(`package.json` 与 `manifest.json` 版本保持同步)。
 
 路线图:
 - [ ] 上架 Chrome Web Store

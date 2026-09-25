@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Chinese Teaching Note Builder",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Generate Chinese teaching notes using AI.",
-  "permissions": ["storage", "activeTab", "scripting", "sidePanel"],
+  "permissions": [
+    "storage",
+    "sidePanel"
+  ],
   "side_panel": {
     "default_path": "sidepanel.html"
   },
@@ -22,7 +25,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Toggle Teaching Note Builder"
+    "default_title": "Open Teaching Note Builder"
   },
   "options_page": "settings.html",
   "icons": {
