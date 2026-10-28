@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   defaultSettings,
+  deleteNote,
   loadNotes,
   loadSettings,
   loadUiState,
@@ -11,6 +12,10 @@ import {
 
 describe('storage helpers', () => {
   beforeEach(() => {
+    let tail = Promise.resolve();
+    Object.defineProperty(globalThis.navigator, 'locks', {configurable:true,value:{request:vi.fn((_name, action) => {
+      const next = tail.catch(() => {}).then(action); tail = next; return next;
+    })}});
     global.chrome = {
       storage: {
         local: {
@@ -88,4 +93,15 @@ describe('storage helpers', () => {
       }
     });
   });
+});
+
+test('concurrent saves and deletes preserve unrelated notes', async () => {
+  let tail=Promise.resolve();
+  Object.defineProperty(globalThis.navigator,'locks',{configurable:true,value:{request:(_name,action)=>{const next=tail.catch(()=>{}).then(action);tail=next;return next;}}});
+  let notes=[{id:'old'}];
+  globalThis.chrome={storage:{local:{get:async()=>({notes:structuredClone(notes)}),set:async(data)=>{await new Promise(resolve=>setTimeout(resolve,1));notes=structuredClone(data.notes);}}}};
+  await Promise.all([saveNote({id:'A'}),saveNote({id:'B'})]);
+  expect(notes.map(n=>n.id)).toEqual(['B','A','old']);
+  await Promise.all([saveNote({id:'C'}),deleteNote('A')]);
+  expect(notes.map(n=>n.id)).toEqual(['C','B','old']);
 });
