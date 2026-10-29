@@ -22,6 +22,10 @@ describe('validators', () => {
       expect(validateChineseInput('经济发展')).toBe(true);
     });
 
+    it.each(['𠮷', '𠀀', '〇'])('accepts Chinese character %s supported by the note parser', (input) => {
+      expect(validateChineseInput(input)).toBe(true);
+    });
+
     it('rejects empty or whitespace-only input', () => {
       expect(validateChineseInput('')).toBe(false);
       expect(validateChineseInput('   ')).toBe(false);
@@ -29,6 +33,7 @@ describe('validators', () => {
 
     it('rejects input with no Chinese characters', () => {
       expect(validateChineseInput('hello world')).toBe(false);
+      expect(validateChineseInput('😀')).toBe(false);
     });
   });
 
