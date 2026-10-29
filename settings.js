@@ -2,7 +2,13 @@ import { getProviderConfig, testLlmConnection } from './lib/llm-client.js';
 import { loadSettings, saveSettings } from './lib/storage.js';
 import { validateSettings } from './lib/validators.js';
 
-let savedSettingsSnapshot = null;
+let isBusy = false;
+
+function setBusy(busy) {
+  isBusy = busy;
+  document.querySelectorAll('#settings-form input, #settings-form select, #settings-form button')
+    .forEach((control) => { control.disabled = busy; });
+}
 
 function setStatus(message, isError = false) {
   const status = document.querySelector('#status');
@@ -61,25 +67,26 @@ function updateEndpointVisibility(provider) {
 
 async function handleSave(event) {
   event.preventDefault();
+  if (isBusy) return;
 
   const settings = getFormSettings();
   if (!validateSettings(settings)) {
-    setStatus('Please provide both API key and model.', true);
+    setStatus('Provide an API key, a model, and a valid endpoint (required for Custom). Use HTTPS or local loopback HTTP.', true);
     return;
   }
 
+  setBusy(true);
   try {
     await saveSettings(settings);
-    savedSettingsSnapshot = settings;
     setStatus('Settings saved.');
   } catch (error) {
     setStatus(error.message || 'Failed to save settings.', true);
+  } finally {
+    setBusy(false);
   }
 }
 
-async function restoreSavedSettings() {
-  const settings = await loadSettings();
-  savedSettingsSnapshot = settings;
+function applySettings(settings) {
   document.querySelector('#provider').value = settings.provider || 'deepseek';
   document.querySelector('#api-key').value = settings.apiKey;
   document.querySelector('#endpoint').value = settings.endpoint || '';
@@ -90,16 +97,30 @@ async function restoreSavedSettings() {
   } else {
     document.querySelector('#model').value = settings.model;
   }
-  setStatus('Changes discarded.');
+}
+
+async function restoreSavedSettings() {
+  if (isBusy) return;
+  setBusy(true);
+  try {
+    applySettings(await loadSettings());
+    setStatus('Changes discarded.');
+  } catch (error) {
+    setStatus(error.message || 'Failed to restore settings.', true);
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function handleTestConnection() {
+  if (isBusy) return;
   const settings = getFormSettings();
   if (!validateSettings(settings)) {
-    setStatus('Please provide both API key and model.', true);
+    setStatus('Provide an API key, a model, and a valid endpoint (required for Custom). Use HTTPS or local loopback HTTP.', true);
     return;
   }
 
+  setBusy(true);
   setStatus('Testing connection...');
 
   try {
@@ -107,21 +128,17 @@ async function handleTestConnection() {
     setStatus('Connection successful.');
   } catch (error) {
     setStatus(error.message || 'Connection failed.', true);
+  } finally {
+    setBusy(false);
   }
 }
 
 export async function initSettingsPage() {
-  const settings = await loadSettings();
-  savedSettingsSnapshot = settings;
-  document.querySelector('#provider').value = settings.provider || 'deepseek';
-  document.querySelector('#api-key').value = settings.apiKey;
-  document.querySelector('#endpoint').value = settings.endpoint || '';
-  updateModelOptions(settings.provider || 'deepseek');
-  updateEndpointVisibility(settings.provider || 'deepseek');
-  if (settings.provider === 'custom') {
-    document.querySelector('#model').value = settings.model || '';
-  } else {
-    document.querySelector('#model').value = settings.model;
+  setBusy(true);
+  try {
+    applySettings(await loadSettings());
+  } finally {
+    setBusy(false);
   }
 
   document.querySelector('#settings-form').addEventListener('submit', handleSave);
@@ -129,8 +146,10 @@ export async function initSettingsPage() {
   document.querySelector('#cancel-button').addEventListener('click', restoreSavedSettings);
   document.querySelector('#provider').addEventListener('change', (event) => {
     document.querySelector('#endpoint').value = '';
+    document.querySelector('#api-key').value = '';
     updateModelOptions(event.target.value);
     updateEndpointVisibility(event.target.value);
+    setStatus('Provider changed. Enter an API key for this provider.');
   });
 }
 

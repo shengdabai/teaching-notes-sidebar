@@ -48,14 +48,18 @@ Repeat generation with level **A** (pinyin only) and **C** (Chinese only). Confi
 - No saved notes: show `No notes to export.`.
 - Clipboard rejection: show `Failed to copy.`.
 
-For a provider error, inspect status codes and sanitized messages. Do not copy authorization headers into reports. For Gemini, the request parser expects JSON note text in `candidates[0].content.parts[0].text`; see [lib/llm-client.js](../lib/llm-client.js).
+For a provider error, inspect status codes and sanitized messages. Do not copy authorization headers into reports. For Gemini, the request parser joins non-thought text parts from the first candidate before parsing the note JSON; see [lib/llm-client.js](../lib/llm-client.js).
 
-## 5. Known settings defects pending a separate configuration fix
+## 5. Settings regression checks
 
-- Selecting Gemini currently produces an empty model list because its settings config falls back to the custom-provider config.
-- Opening settings or using Cancel clears a saved custom endpoint in the form. Do not save over an existing custom endpoint until this is fixed.
+- Selecting Gemini should offer `gemini-2.5-flash` (default) and `gemini-2.5-pro`. Saving and reopening should preserve the selected model. Its endpoint field remains hidden.
+- Opening settings or using Cancel should preserve a saved custom endpoint. Only changing the provider clears the endpoint and API key in the form; saved storage remains unchanged until Save.
+- Use a mocked pending connection test: repeated clicks should make only one request. All settings fields, Save, Cancel and Test Connection remain disabled until it completes or fails, then become usable again.
+- During a pending save or Cancel read, controls should also be locked. A failed save or read should show an error, release controls, and preserve the unsaved form values.
+- Custom requires an endpoint. Public endpoints must use HTTPS; HTTP is accepted only for `localhost` or loopback IPs. Embedded URL usernames/passwords are rejected. Invalid settings must neither save nor trigger a request.
+- Requests reject redirects so credentials cannot follow a redirect to another destination. Configure the final API URL directly.
 
-These are locally reproducible UI/configuration defects. Passing the unit tests does not establish that every provider can be configured or called successfully.
+The Gemini model IDs match the existing client allowlist and Google's official [Flash](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash) and [Pro](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-pro) references (checked 2026-10-30). Google currently limits 2.5 access to prior users; new accounts may need a newer model that this legacy extension does not yet list. Passing the mocked tests does not establish account access, provider availability, or real-browser behavior.
 
 ## 6. Local automated checks
 
