@@ -53,10 +53,8 @@ function updateEndpointVisibility(provider) {
     const endpointInput = document.querySelector('#endpoint');
     if (provider === 'custom') {
       endpointInput.placeholder = 'https://api.example.com/v1/chat/completions';
-      endpointInput.value = '';
     } else {
       endpointInput.placeholder = config.defaultEndpoint || '';
-      endpointInput.value = '';
     }
   }
 }
@@ -130,6 +128,7 @@ export async function initSettingsPage() {
   document.querySelector('#test-connection').addEventListener('click', handleTestConnection);
   document.querySelector('#cancel-button').addEventListener('click', restoreSavedSettings);
   document.querySelector('#provider').addEventListener('change', (event) => {
+    document.querySelector('#endpoint').value = '';
     updateModelOptions(event.target.value);
     updateEndpointVisibility(event.target.value);
   });

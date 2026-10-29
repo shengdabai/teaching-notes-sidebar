@@ -131,4 +131,62 @@ describe('settings page', () => {
 
     expect(getProviderConfig).toHaveBeenCalledWith('gemini');
   });
+
+  const customSettings = {
+    provider: 'custom',
+    apiKey: 'test-key',
+    model: 'test-model',
+    endpoint: 'https://api.example.com/v1/chat/completions'
+  };
+
+  async function openCustomSettings() {
+    loadSettings.mockResolvedValue({ ...customSettings });
+    saveSettings.mockClear();
+    setupDOM();
+    const { initSettingsPage } = await import('../settings.js');
+    await initSettingsPage();
+  }
+
+  test('opening settings preserves the saved custom endpoint', async () => {
+    await openCustomSettings();
+
+    expect(document.querySelector('#provider').value).toBe('custom');
+    expect(document.querySelector('#model').value).toBe(customSettings.model);
+    expect(document.querySelector('#endpoint').value).toBe(customSettings.endpoint);
+    expect(document.querySelector('#endpoint-group').style.display).toBe('');
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  test('cancel restores the saved custom endpoint after switching providers', async () => {
+    await openCustomSettings();
+    const provider = document.querySelector('#provider');
+    provider.value = 'gemini';
+    provider.dispatchEvent(new Event('change', { bubbles: true }));
+    document.querySelector('#endpoint').value = 'https://unsaved.example.com';
+
+    document.querySelector('#cancel-button').click();
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('#status').textContent).toBe('Changes discarded.');
+      expect(provider.value).toBe('custom');
+      expect(document.querySelector('#model').value).toBe(customSettings.model);
+      expect(document.querySelector('#endpoint').value).toBe(customSettings.endpoint);
+      expect(document.querySelector('#endpoint-group').style.display).toBe('');
+    });
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  test.each(['deepseek', 'gemini'])('switching from custom to %s clears the endpoint', async (nextProvider) => {
+    await openCustomSettings();
+    const provider = document.querySelector('#provider');
+    // Set the current input explicitly so this test isolates the change event.
+    document.querySelector('#endpoint').value = customSettings.endpoint;
+    provider.value = nextProvider;
+
+    provider.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(document.querySelector('#endpoint').value).toBe('');
+    expect(document.querySelector('#endpoint-group').style.display).toBe(nextProvider === 'gemini' ? 'none' : '');
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
 });
