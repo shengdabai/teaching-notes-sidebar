@@ -84,9 +84,9 @@ async function restoreSavedSettings() {
   savedSettingsSnapshot = settings;
   document.querySelector('#provider').value = settings.provider || 'deepseek';
   document.querySelector('#api-key').value = settings.apiKey;
-  document.querySelector('#endpoint').value = settings.endpoint || '';
   updateModelOptions(settings.provider || 'deepseek');
   updateEndpointVisibility(settings.provider || 'deepseek');
+  document.querySelector('#endpoint').value = settings.endpoint || '';
   if (settings.provider === 'custom') {
     document.querySelector('#model').value = settings.model || '';
   } else {
@@ -117,9 +117,9 @@ export async function initSettingsPage() {
   savedSettingsSnapshot = settings;
   document.querySelector('#provider').value = settings.provider || 'deepseek';
   document.querySelector('#api-key').value = settings.apiKey;
-  document.querySelector('#endpoint').value = settings.endpoint || '';
   updateModelOptions(settings.provider || 'deepseek');
   updateEndpointVisibility(settings.provider || 'deepseek');
+  document.querySelector('#endpoint').value = settings.endpoint || '';
   if (settings.provider === 'custom') {
     document.querySelector('#model').value = settings.model || '';
   } else {

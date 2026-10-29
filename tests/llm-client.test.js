@@ -30,13 +30,30 @@ describe('provider config', () => {
     expect(providers).toContain('deepseek');
     expect(providers).toContain('claude');
     expect(providers).toContain('custom');
-    // gemini is handled on its own path, not in the OpenAI-compatible config map
-    expect(providers).not.toContain('gemini');
+    expect(providers).toContain('gemini');
   });
 
   it('returns deepseek defaults and falls back to custom for unknown', () => {
     expect(getProviderConfig('deepseek').defaultModel).toBe('deepseek-chat');
     expect(getProviderConfig('nope')).toBe(getProviderConfig('custom'));
+  });
+
+  it('exposes Gemini models that the request client accepts', async () => {
+    const config = getProviderConfig('gemini');
+    expect(config.models).toEqual(['gemini-2.5-flash', 'gemini-2.5-pro']);
+    expect(config.defaultModel).toBe('gemini-2.5-flash');
+    expect(config.hasEndpoint).toBe(false);
+
+    for (const model of config.models) {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: '{"line2":"ok","line3":"ok"}' }] } }] })
+      });
+      await expect(testLlmConnection({ provider: 'gemini', apiKey: 'test-key', model })).resolves.toBe(true);
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, expect.any(Object)
+      );
+    }
   });
 });
 

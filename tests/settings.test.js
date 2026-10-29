@@ -10,17 +10,12 @@ vi.mock('../lib/storage.js', () => ({
   saveUiState: vi.fn()
 }));
 
-vi.mock('../lib/llm-client.js', () => ({
-  testLlmConnection: vi.fn().mockResolvedValue(true),
-  getProviderConfig: vi.fn().mockReturnValue({
-    models: ['deepseek-chat'],
-    defaultModel: 'deepseek-chat',
-    defaultEndpoint: 'https://api.deepseek.com/v1/chat/completions'
-  })
+vi.mock('../lib/llm-client.js', async (importOriginal) => ({
+  ...await importOriginal(),
+  testLlmConnection: vi.fn().mockResolvedValue(true)
 }));
 
 import { loadSettings, saveSettings } from '../lib/storage.js';
-import { testLlmConnection, getProviderConfig } from '../lib/llm-client.js';
 
 describe('settings page', () => {
   function setupDOM() {
@@ -129,6 +124,65 @@ describe('settings page', () => {
     document.querySelector('#provider').value = 'gemini';
     document.querySelector('#provider').dispatchEvent(new Event('change', { bubbles: true }));
 
-    expect(getProviderConfig).toHaveBeenCalledWith('gemini');
+    expect([...document.querySelector('#model').options].map((option) => option.value))
+      .toEqual(['gemini-2.5-flash', 'gemini-2.5-pro']);
+    expect(document.querySelector('#model').value).toBe('gemini-2.5-flash');
+    expect(document.querySelector('#endpoint-group').style.display).toBe('none');
+  });
+
+  test.each(['custom', 'deepseek'])('preserves a saved %s endpoint when reopening settings', async (provider) => {
+    const settings = {
+      provider,
+      apiKey: 'test-key',
+      model: provider === 'custom' ? 'example-model' : 'deepseek-chat',
+      endpoint: 'https://api.example.com/v1/chat/completions'
+    };
+    loadSettings.mockResolvedValue(settings);
+    const { initSettingsPage } = await import('../settings.js');
+
+    for (let reopen = 0; reopen < 2; reopen++) {
+      setupDOM();
+      await initSettingsPage();
+      expect(document.querySelector('#endpoint').value).toBe(settings.endpoint);
+      expect(document.querySelector('#model').value).toBe(settings.model);
+      document.querySelector('#settings-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true })
+      );
+      await vi.waitFor(() => expect(document.querySelector('#status').textContent).toBe('Settings saved.'));
+      expect(saveSettings).toHaveBeenLastCalledWith(settings);
+    }
+  });
+
+  test('cancel restores the saved custom endpoint after switching providers', async () => {
+    const settings = {
+      provider: 'custom', apiKey: 'test-key', model: 'example-model',
+      endpoint: 'https://api.example.com/v1/chat/completions'
+    };
+    loadSettings.mockResolvedValue(settings);
+    setupDOM();
+    const { initSettingsPage } = await import('../settings.js');
+    await initSettingsPage();
+    document.querySelector('#provider').value = 'deepseek';
+    document.querySelector('#provider').dispatchEvent(new Event('change'));
+    expect(document.querySelector('#endpoint').value).toBe('');
+    document.querySelector('#endpoint').value = 'https://unsaved.example.com';
+    document.querySelector('#cancel-button').click();
+
+    await vi.waitFor(() => expect(document.querySelector('#status').textContent).toBe('Changes discarded.'));
+    expect(document.querySelector('#provider').value).toBe('custom');
+    expect(document.querySelector('#endpoint').value).toBe(settings.endpoint);
+    expect(document.querySelector('#model').value).toBe(settings.model);
+  });
+
+  test('reopens saved Gemini settings with the selected model', async () => {
+    loadSettings.mockResolvedValue({
+      provider: 'gemini', apiKey: 'test-key', model: 'gemini-2.5-pro', endpoint: ''
+    });
+    setupDOM();
+    const { initSettingsPage } = await import('../settings.js');
+    await initSettingsPage();
+
+    expect(document.querySelector('#model').value).toBe('gemini-2.5-pro');
+    expect(document.querySelector('#endpoint-group').style.display).toBe('none');
   });
 });

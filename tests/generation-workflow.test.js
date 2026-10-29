@@ -120,6 +120,40 @@ for (const mode of ['sidepanel', 'floating']) {
       expect([input.disabled, level.disabled, reset.disabled, generate.disabled]).toEqual([false, false, false, false]);
     });
 
+    test.each(['success', 'generation error', 'missing settings', 'settings error'])(
+      'restores input focus after %s when generation started from the input', async (outcome) => {
+        if (outcome === 'generation error') mocks.generate.mockRejectedValueOnce(new Error('Request failed.'));
+        if (outcome === 'missing settings') mocks.loadSettings.mockResolvedValueOnce({ ...settings, apiKey: '' });
+        if (outcome === 'settings error') mocks.loadSettings.mockRejectedValueOnce(new Error('Settings unavailable.'));
+        input.focus();
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        expect(input.disabled).toBe(true);
+        // jsdom does not blur disabled controls as Chrome does; reproduce that loss explicitly.
+        document.body.tabIndex = -1;
+        document.body.focus();
+        expect(document.activeElement).not.toBe(input);
+
+        await vi.waitFor(() => expect(input.disabled).toBe(false));
+        expect(document.activeElement).toBe(input);
+        if (outcome === 'success') expect(mocks.saveNote).toHaveBeenCalledTimes(1);
+        else expect(mocks.saveNote).not.toHaveBeenCalled();
+      }
+    );
+
+    test('does not focus the input when it was not focused before generation', async () => {
+      const pending = deferred();
+      mocks.generate.mockReturnValue(pending.promise);
+      const otherControl = mode === 'sidepanel'
+        ? document.getElementById('line2') : document.getElementById('tn-line2');
+      otherControl.focus();
+      generate.click();
+      await vi.waitFor(() => expect(mocks.generate).toHaveBeenCalledTimes(1));
+      pending.resolve(note);
+      await vi.waitFor(() => expect(input.disabled).toBe(false));
+
+      expect(document.activeElement).toBe(otherControl);
+    });
+
     test('releases the controls after missing settings so the user can retry', async () => {
       mocks.loadSettings.mockResolvedValueOnce({ ...settings, apiKey: '' });
       generate.click();

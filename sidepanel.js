@@ -85,6 +85,7 @@ async function onGenerate() {
   }
 
   const requestLevel = selectedLevel;
+  const restoreInputFocus = document.activeElement === elements.sourceText;
   setGenerating(true);
   setStatus('Generating...');
 
@@ -126,6 +127,7 @@ async function onGenerate() {
     setStatus(error.message || 'Failed to generate note.', true);
   } finally {
     setGenerating(false);
+    if (restoreInputFocus) elements.sourceText.focus();
   }
 }
 

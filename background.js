@@ -2,8 +2,12 @@ import { generateTeachingNote } from './lib/llm-client.js';
 import { buildPrompt } from './lib/prompt-builder.js';
 import { loadNotes, loadSettings, loadUiState, saveNote, saveUiState } from './lib/storage.js';
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.session.set({ panelVisible: false });
+function panelVisibilityKey(tabId) {
+  return `panelVisible:${tabId}`;
+}
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  chrome.storage.session.remove(panelVisibilityKey(tabId));
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -24,7 +28,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       saveUiState(msg.state).catch(console.error);
       break;
     case 'panel-hidden':
-      chrome.storage.session.set({ panelVisible: false });
+      if (sender.tab?.id != null) {
+        chrome.storage.session.set({ [panelVisibilityKey(sender.tab.id)]: false });
+      }
       break;
     case 'generate':
       (async () => {
@@ -52,10 +58,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.url?.startsWith('http')) return;
 
-  const storage = await chrome.storage.session.get('panelVisible');
-  if (storage.panelVisible) {
+  const visibilityKey = panelVisibilityKey(tab.id);
+  const storage = await chrome.storage.session.get(visibilityKey);
+  if (storage[visibilityKey]) {
     chrome.tabs.sendMessage(tab.id, { action: 'hide-panel' });
-    await chrome.storage.session.set({ panelVisible: false });
+    await chrome.storage.session.set({ [visibilityKey]: false });
   } else {
     try {
       await chrome.scripting.executeScript({
@@ -64,6 +71,6 @@ chrome.action.onClicked.addListener(async (tab) => {
       });
     } catch (_) {}
     chrome.tabs.sendMessage(tab.id, { action: 'show-panel' });
-    await chrome.storage.session.set({ panelVisible: true });
+    await chrome.storage.session.set({ [visibilityKey]: true });
   }
 });

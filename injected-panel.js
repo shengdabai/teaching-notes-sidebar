@@ -207,6 +207,7 @@
     const text = sourceText.value.trim();
     if (!validateChinese(text)) { setStatus('Please enter Chinese text first.', true); return; }
     const requestLevel = selectedLevel;
+    const restoreInputFocus = document.activeElement === sourceText;
     isGenerating = true;
     for (const control of [genBtn, sourceText, levelSelect, el('tn-reset')]) control.disabled = true;
     setStatus('Generating...');
@@ -234,6 +235,7 @@
     finally {
       isGenerating = false;
       for (const control of [genBtn, sourceText, levelSelect, el('tn-reset')]) control.disabled = false;
+      if (restoreInputFocus) sourceText.focus();
     }
   }
 
