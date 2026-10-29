@@ -63,6 +63,9 @@ async function persistUiState() {
 
 function setGenerating(busy) {
   isGenerating = busy;
+  for (const control of [elements.sourceText, elements.levelSelect, elements.resetButton]) {
+    if (control) control.disabled = busy;
+  }
   if (elements.generateButton) {
     elements.generateButton.disabled = busy;
     elements.generateButton.title = busy ? 'Generating...' : 'Press Enter to generate';
@@ -81,19 +84,19 @@ async function onGenerate() {
     return;
   }
 
-  const settings = await loadSettings();
-  if (!settings.apiKey || !settings.model) {
-    setStatus('Please configure AI settings first.', true);
-    return;
-  }
-
+  const requestLevel = selectedLevel;
   setGenerating(true);
   setStatus('Generating...');
 
   try {
+    const settings = await loadSettings();
+    if (!settings.apiKey || !settings.model) {
+      setStatus('Please configure AI settings first.', true);
+      return;
+    }
     const prompt = buildPrompt({
       sourceText: trimmedSourceText,
-      level: selectedLevel
+      level: requestLevel
     });
     const result = await generateTeachingNote({
       provider: settings.provider || 'deepseek',
@@ -101,7 +104,7 @@ async function onGenerate() {
       model: settings.model,
       prompt,
       endpoint: settings.endpoint,
-      level: selectedLevel
+      level: requestLevel
     });
 
     renderLevel();
@@ -113,7 +116,7 @@ async function onGenerate() {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       sourceText: trimmedSourceText,
-      level: selectedLevel,
+      level: requestLevel,
       line2: result.line2,
       line3: result.line3
     });
@@ -220,7 +223,7 @@ function bindEvents() {
 
   // Enter key triggers generation
   elements.sourceText?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       onGenerate();
     }

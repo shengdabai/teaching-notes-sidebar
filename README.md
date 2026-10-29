@@ -5,7 +5,7 @@ AI-powered Chinese teaching note generator — a Chrome extension that converts 
 ## Features
 
 - **9 AI Providers**: DeepSeek (default, no VPN needed), MiniMax, GLM, ChatGPT, Claude, Kimi, Qwen, Gemini, Custom OpenAI-compatible
-- **Dual UI**: Chrome sidepanel + floating in-page panel (draggable, resizable)
+- **Dual UI**: Floating in-page panel (draggable, resizable) + standalone panel page
 - **3 Difficulty Levels** (line 2 changes per level; pinyin is grouped by word, not by single syllable):
   - **A** — pinyin only (e.g. `Běijīng`)
   - **B** — Chinese + pinyin per word (e.g. `经济jīngjì 发展fāzhǎn`)
@@ -19,12 +19,14 @@ AI-powered Chinese teaching note generator — a Chrome extension that converts 
 1. Clone this repository
 2. Open Chrome → `chrome://extensions/` → Developer mode
 3. Click **Load unpacked** → select this directory
-4. Click the extension icon to open the sidepanel
+4. Open a normal HTTP(S) page, then click the extension icon to toggle the floating panel
+
+The current manifest uses the floating panel. The standalone sidepanel page is also kept in the repository; see the [Chrome debug checklist](docs/chrome-debug-checklist.md).
 
 ## Tests
 
 ```bash
-npm install
+npm ci
 npm test
 ```
 

@@ -179,8 +179,12 @@
   }
 
   function loadSettings() {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'get-settings' }, (r) => resolve(r || { provider: 'deepseek', apiKey: '', model: '', endpoint: '' }));
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'get-settings' }, (r) => {
+        const error = chrome.runtime.lastError;
+        if (error) { reject(new Error(error.message)); return; }
+        resolve(r || { provider: 'deepseek', apiKey: '', model: '', endpoint: '' });
+      });
     });
   }
   function loadNotes() {
@@ -202,26 +206,41 @@
     if (isGenerating) return;
     const text = sourceText.value.trim();
     if (!validateChinese(text)) { setStatus('Please enter Chinese text first.', true); return; }
-    const settings = await loadSettings();
-    if (!settings.apiKey || !settings.model) { setStatus('Please configure AI settings first.', true); return; }
-
-    isGenerating = true; genBtn.disabled = true; setStatus('Generating...');
+    const requestLevel = selectedLevel;
+    isGenerating = true;
+    for (const control of [genBtn, sourceText, levelSelect, el('tn-reset')]) control.disabled = true;
+    setStatus('Generating...');
     try {
+      const settings = await loadSettings();
+      if (!settings.apiKey || !settings.model) { setStatus('Please configure AI settings first.', true); return; }
       const result = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
           action: 'generate', provider: settings.provider || 'deepseek',
           apiKey: settings.apiKey, model: settings.model,
-          sourceText: text, level: selectedLevel, endpoint: settings.endpoint
-        }, (resp) => { resp?.error ? reject(new Error(resp.error)) : resolve(resp); });
+          sourceText: text, level: requestLevel, endpoint: settings.endpoint
+        }, (resp) => {
+          const error = chrome.runtime.lastError;
+          if (error || resp?.error || !resp) {
+            reject(new Error(error?.message || resp?.error || 'No response from extension.'));
+          } else {
+            resolve(resp);
+          }
+        });
       });
       line2.value = result.line2; line3.value = result.line3;
-      saveNote({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), sourceText: text, level: selectedLevel, line2: result.line2, line3: result.line3 });
+      saveNote({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), sourceText: text, level: requestLevel, line2: result.line2, line3: result.line3 });
       setStatus('Done.');
     } catch (err) { setStatus(err.message || 'Failed.', true); }
-    finally { isGenerating = false; genBtn.disabled = false; }
+    finally {
+      isGenerating = false;
+      for (const control of [genBtn, sourceText, levelSelect, el('tn-reset')]) control.disabled = false;
+    }
   }
 
-  levelSelect.addEventListener('change', () => { selectedLevel = levelSelect.value; });
+  levelSelect.addEventListener('change', () => {
+    selectedLevel = levelSelect.value;
+    saveUiState({ sourceText: sourceText.value, selectedLevel });
+  });
   sourceText.addEventListener('input', () => {
     clearTimeout(sourceText._timer);
     sourceText._timer = setTimeout(() => saveUiState({ sourceText: sourceText.value, selectedLevel }), 300);
@@ -229,7 +248,7 @@
   sourceText.addEventListener('compositionstart', () => { isComposing = true; });
   sourceText.addEventListener('compositionend', () => { isComposing = false; });
   sourceText.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isComposing) { e.preventDefault(); onGenerate(); }
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); onGenerate(); }
   });
   genBtn.addEventListener('click', onGenerate);
   el('tn-copy-l2').addEventListener('click', () => { const t = line2.value.trim(); if (!t) { setStatus('Nothing to copy.', true); return; } navigator.clipboard.writeText(t).then(() => setStatus('Copied.')); });
@@ -269,7 +288,14 @@
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === 'show-panel') {
       panel.classList.add('visible');
-      loadUiState().then((s) => { sourceText.value = s.sourceText || ''; selectedLevel = s.selectedLevel || 'A'; levelSelect.value = selectedLevel; });
+      if (!isGenerating) {
+        loadUiState().then((s) => {
+          if (isGenerating) return;
+          sourceText.value = s.sourceText || '';
+          selectedLevel = s.selectedLevel || 'A';
+          levelSelect.value = selectedLevel;
+        });
+      }
     }
     if (msg.action === 'hide-panel') panel.classList.remove('visible');
   });
