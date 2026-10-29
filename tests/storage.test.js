@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   defaultSettings,
+  deleteNote,
   loadNotes,
   loadSettings,
   loadUiState,
@@ -9,7 +10,13 @@ import {
   saveUiState
 } from '../lib/storage.js';
 
+const locksDescriptor = Object.getOwnPropertyDescriptor(navigator, 'locks');
+
 describe('storage helpers', () => {
+  afterEach(() => {
+    if (locksDescriptor) Object.defineProperty(navigator, 'locks', locksDescriptor);
+    else delete navigator.locks;
+  });
   beforeEach(() => {
     global.chrome = {
       storage: {
@@ -87,5 +94,70 @@ describe('storage helpers', () => {
         selectedLevel: 'B'
       }
     });
+  });
+
+  function useStoredNotes(initialNotes = []) {
+    let notes = initialNotes;
+    chrome.storage.local.get.mockImplementation(async () => ({ notes: structuredClone(notes) }));
+    chrome.storage.local.set.mockImplementation(async (data) => {
+      // A storage round trip leaves time for another caller to read the old list.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      notes = structuredClone(data.notes);
+    });
+    return () => notes;
+  }
+
+  function useSharedLocks() {
+    const queues = new Map();
+    const request = vi.fn((name, callback) => {
+      const result = (queues.get(name) || Promise.resolve()).then(callback);
+      queues.set(name, result.catch(() => {}));
+      return result;
+    });
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+    return request;
+  }
+
+  test('preserves concurrent notes from different extension contexts', async () => {
+    const storedNotes = useStoredNotes([{ id: 'original' }]);
+    const request = useSharedLocks();
+    vi.resetModules();
+    const otherContext = await import('../lib/storage.js');
+    await Promise.all([saveNote({ id: 'first' }), otherContext.saveNote({ id: 'second' })]);
+    expect(storedNotes().map((note) => note.id)).toEqual(['second', 'first', 'original']);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[0][0]).toBe(request.mock.calls[1][0]);
+  });
+
+  test('serializes deletion with saving so deleted notes do not reappear', async () => {
+    const storedNotes = useStoredNotes([{ id: 'remove' }, { id: 'keep' }]);
+    useSharedLocks();
+    await Promise.all([deleteNote('remove'), saveNote({ id: 'new' })]);
+    expect(storedNotes().map((note) => note.id)).toEqual(['new', 'keep']);
+  });
+
+  test('a failed write releases the lock and leaves existing notes intact', async () => {
+    const storedNotes = useStoredNotes([{ id: 'keep' }]);
+    useSharedLocks();
+    chrome.storage.local.set.mockRejectedValueOnce(new Error('Storage unavailable.'));
+    await expect(saveNote({ id: 'failed' })).rejects.toThrow('Storage unavailable.');
+    await saveNote({ id: 'retry' });
+    expect(storedNotes().map((note) => note.id)).toEqual(['retry', 'keep']);
+  });
+
+  test('serializes same-context writes when the Web Locks API is unavailable', async () => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+    const storedNotes = useStoredNotes([{ id: 'keep' }]);
+    await Promise.all([saveNote({ id: 'first' }), saveNote({ id: 'second' })]);
+    expect(storedNotes().map((note) => note.id)).toEqual(['second', 'first', 'keep']);
+  });
+
+  test('a failed fallback write does not prevent the next save', async () => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+    const storedNotes = useStoredNotes([{ id: 'keep' }]);
+    chrome.storage.local.set.mockRejectedValueOnce(new Error('Storage unavailable.'));
+    await expect(saveNote({ id: 'failed' })).rejects.toThrow('Storage unavailable.');
+    await saveNote({ id: 'retry' });
+    expect(storedNotes().map((note) => note.id)).toEqual(['retry', 'keep']);
   });
 });

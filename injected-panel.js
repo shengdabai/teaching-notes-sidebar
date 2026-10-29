@@ -178,26 +178,30 @@
     statusEl.classList.toggle('error', !!isError);
   }
 
-  function loadSettings() {
+  function request(message) {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'get-settings' }, (r) => {
+      chrome.runtime.sendMessage(message, (response) => {
         const error = chrome.runtime.lastError;
-        if (error) { reject(new Error(error.message)); return; }
-        resolve(r || { provider: 'deepseek', apiKey: '', model: '', endpoint: '' });
+        if (error || response?.error || !response) {
+          reject(new Error(error?.message || response?.error || 'No response from extension.'));
+          return;
+        }
+        resolve(response);
       });
     });
   }
+  function loadSettings() { return request({ action: 'get-settings' }); }
   function loadNotes() {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'get-notes' }, (r) => resolve(Array.isArray(r) ? r : []));
+    return request({ action: 'get-notes' }).then((notes) => Array.isArray(notes) ? notes : []);
+  }
+  function saveNote(note) {
+    return request({ action: 'save-note', note }).then((response) => {
+      if (!response.ok) throw new Error('No save confirmation from extension.');
     });
   }
-  function saveNote(n) { chrome.runtime.sendMessage({ action: 'save-note', note: n }); }
   function saveUiState(s) { chrome.runtime.sendMessage({ action: 'save-ui-state', state: s }); }
   function loadUiState() {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'get-ui-state' }, (r) => resolve(r || { sourceText: '', selectedLevel: 'A' }));
-    });
+    return request({ action: 'get-ui-state' });
   }
 
   function validateChinese(t) { return /[\u4e00-\u9fff]/.test(t); }
@@ -229,7 +233,7 @@
         });
       });
       line2.value = result.line2; line3.value = result.line3;
-      saveNote({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), sourceText: text, level: requestLevel, line2: result.line2, line3: result.line3 });
+      await saveNote({ createdAt: new Date().toISOString(), sourceText: text, level: requestLevel, line2: result.line2, line3: result.line3 });
       setStatus('Done.');
     } catch (err) { setStatus(err.message || 'Failed.', true); }
     finally {
@@ -253,17 +257,55 @@
     if (e.key === 'Enter' && !e.shiftKey && !isComposing && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); onGenerate(); }
   });
   genBtn.addEventListener('click', onGenerate);
-  el('tn-copy-l2').addEventListener('click', () => { const t = line2.value.trim(); if (!t) { setStatus('Nothing to copy.', true); return; } navigator.clipboard.writeText(t).then(() => setStatus('Copied.')); });
-  el('tn-copy-l3').addEventListener('click', () => { const t = line3.value.trim(); if (!t) { setStatus('Nothing to copy.', true); return; } navigator.clipboard.writeText(t).then(() => setStatus('Copied.')); });
+  async function copyText(text, successMessage) {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable.');
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      // HTTP pages lack the Clipboard API; use a temporary selection in the click handler.
+      const focused = document.activeElement;
+      const selectionStart = focused?.selectionStart;
+      const selectionEnd = focused?.selectionEnd;
+      const selectionDirection = focused?.selectionDirection;
+      const selection = window.getSelection();
+      const ranges = selection ? Array.from({ length: selection.rangeCount }, (_, i) => selection.getRangeAt(i).cloneRange()) : [];
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.readOnly = true;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      textarea.setAttribute('aria-label', 'Copy text');
+      try {
+        panel.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        if (!document.execCommand('copy')) throw new Error('Copy was denied.');
+      } catch (_) {
+        setStatus('Failed to copy. Select the text and copy it manually.', true);
+        return;
+      } finally {
+        textarea.remove();
+        focused?.focus({ preventScroll: true });
+        if (typeof selectionStart === 'number') focused.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+        if (selection) {
+          selection.removeAllRanges();
+          ranges.forEach((range) => selection.addRange(range));
+        }
+      }
+    }
+    setStatus(successMessage);
+  }
+  el('tn-copy-l2').addEventListener('click', () => { const t = line2.value.trim(); if (!t) { setStatus('Nothing to copy.', true); return; } copyText(t, 'Copied.'); });
+  el('tn-copy-l3').addEventListener('click', () => { const t = line3.value.trim(); if (!t) { setStatus('Nothing to copy.', true); return; } copyText(t, 'Copied.'); });
   el('tn-copy-all').addEventListener('click', () => {
     const parts = [];
     if (sourceText.value.trim()) parts.push('Input: ' + sourceText.value.trim());
     if (line2.value.trim()) parts.push('Note: ' + line2.value.trim());
     if (line3.value.trim()) parts.push('Explanation: ' + line3.value.trim());
     if (!parts.length) { setStatus('Nothing to copy yet.', true); return; }
-    navigator.clipboard.writeText(parts.join('\n')).then(() => setStatus('Copied all.'));
+    copyText(parts.join('\n'), 'Copied all.');
   });
-  el('tn-export').addEventListener('click', async () => {
+  async function exportNotes() {
     const notes = await loadNotes();
     if (!notes.length) { setStatus('No notes to export.', true); return; }
     const now = new Date(); const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -278,13 +320,18 @@
     const a = document.createElement('a'); a.href = url; a.download = 'teaching-notes-' + ts + '.md';
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     setStatus('Exported ' + notes.length + ' notes.');
+  }
+  el('tn-export').addEventListener('click', () => {
+    exportNotes().catch((error) => setStatus(error.message || 'Failed to export notes.', true));
   });
   el('tn-reset').addEventListener('click', () => {
     selectedLevel = 'A'; levelSelect.value = 'A';
     sourceText.value = ''; line2.value = ''; line3.value = '';
     setStatus('Reset.'); saveUiState({ sourceText: '', selectedLevel: 'A' });
   });
-  el('tn-settings').addEventListener('click', () => { chrome.runtime.openOptionsPage(); });
+  el('tn-settings').addEventListener('click', () => {
+    request({ action: 'open-settings' }).catch((error) => setStatus(error.message || 'Failed to open settings.', true));
+  });
   el('tn-close').addEventListener('click', () => { panel.classList.remove('visible'); chrome.runtime.sendMessage({ action: 'panel-hidden' }); });
 
   chrome.runtime.onMessage.addListener((msg) => {
@@ -296,7 +343,7 @@
           sourceText.value = s.sourceText || '';
           selectedLevel = s.selectedLevel || 'A';
           levelSelect.value = selectedLevel;
-        });
+        }).catch((error) => setStatus(error.message || 'Failed to restore input.', true));
       }
     }
     if (msg.action === 'hide-panel') panel.classList.remove('visible');

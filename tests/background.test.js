@@ -17,10 +17,14 @@ describe('floating panel visibility by tab', () => {
     session = {};
     global.chrome = {
       runtime: {
+        openOptionsPage: vi.fn().mockResolvedValue(),
         onInstalled: { addListener: vi.fn() },
         onMessage: { addListener: vi.fn() }
       },
-      storage: { session: {
+      storage: { local: {
+        get: vi.fn().mockResolvedValue({ notes: [] }),
+        set: vi.fn().mockResolvedValue()
+      }, session: {
         get: vi.fn(async (key) => ({ [key]: session[key] })),
         set: vi.fn(async (values) => { Object.assign(session, values); }),
         remove: vi.fn(async (key) => { delete session[key]; })
@@ -115,5 +119,57 @@ describe('floating panel visibility by tab', () => {
     expect(chrome.storage.session.get).not.toHaveBeenCalled();
     expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
     expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
+  test('creates note IDs in the extension and acknowledges only after saving', async () => {
+    let finishSave;
+    chrome.storage.local.set.mockImplementation(() => new Promise((resolve) => { finishSave = resolve; }));
+    const reply = vi.fn();
+    const note = { sourceText: '北京', level: 'B', line2: '北京Běijīng', line3: 'Beijing.' };
+    expect(receiveMessage({ action: 'save-note', note }, { tab: tabA }, reply)).toBe(true);
+    await vi.waitFor(() => expect(chrome.storage.local.set).toHaveBeenCalledTimes(1));
+    expect(reply).not.toHaveBeenCalled();
+    const saved = chrome.storage.local.set.mock.calls[0][0].notes[0];
+    expect(saved).toMatchObject(note);
+    expect(saved.id).toMatch(/^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i);
+    finishSave();
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledWith({ ok: true }));
+  });
+
+  test('returns a storage failure to the panel instead of acknowledging success', async () => {
+    chrome.storage.local.set.mockRejectedValueOnce(new Error('Storage quota exceeded.'));
+    const reply = vi.fn();
+    expect(receiveMessage({ action: 'save-note', note: { sourceText: '北京' } }, { tab: tabA }, reply)).toBe(true);
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledWith({ error: 'Storage quota exceeded.' }));
+    expect(reply).toHaveBeenCalledTimes(1);
+  });
+
+  test('preserves an existing note ID when saving', async () => {
+    const reply = vi.fn();
+    receiveMessage({ action: 'save-note', note: { id: 'existing-id', sourceText: '北京' } }, {}, reply);
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledWith({ ok: true }));
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({ notes: [expect.objectContaining({ id: 'existing-id' })] });
+  });
+
+  test.each(['get-settings', 'get-ui-state', 'get-notes'])('returns a %s read error through the message channel', async (action) => {
+    chrome.storage.session.get.mockRejectedValueOnce(new Error('Storage unavailable.'));
+    chrome.storage.local.get.mockRejectedValueOnce(new Error('Storage unavailable.'));
+    const reply = vi.fn();
+    expect(receiveMessage({ action }, { tab: tabA }, reply)).toBe(true);
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledWith({ error: 'Storage unavailable.' }));
+  });
+
+  test('opens settings from the extension context and acknowledges success', async () => {
+    const reply = vi.fn();
+    expect(receiveMessage({ action: 'open-settings' }, { tab: tabA }, reply)).toBe(true);
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledWith({ ok: true }));
+    expect(chrome.runtime.openOptionsPage).toHaveBeenCalledTimes(1);
+  });
+
+  test('returns an options-page opening failure to the panel', async () => {
+    chrome.runtime.openOptionsPage.mockRejectedValueOnce(new Error('Options page unavailable.'));
+    const reply = vi.fn();
+    receiveMessage({ action: 'open-settings' }, { tab: tabA }, reply);
+    await vi.waitFor(() => expect(reply).toHaveBeenCalledWith({ error: 'Options page unavailable.' }));
   });
 });

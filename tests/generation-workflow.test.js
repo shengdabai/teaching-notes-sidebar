@@ -21,6 +21,8 @@ const settings = { provider: 'deepseek', apiKey: 'test-key', model: 'deepseek-ch
 const note = { line2: '北京Běijīng', line3: 'Beijing.' };
 const floatingScript = readFileSync('injected-panel.js', 'utf8');
 const sidepanelHtml = readFileSync('sidepanel.html', 'utf8');
+const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+const execCommandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
 
 function deferred() {
   let resolve;
@@ -55,11 +57,14 @@ for (const mode of ['sidepanel', 'floating']) {
           } else if (message.action === 'generate') {
             mocks.generate(message).then(callback, (error) => callback({ error: error.message }));
           } else if (message.action === 'save-note') {
-            mocks.saveNote(message.note);
+            mocks.saveNote(message.note).then(() => callback?.({ ok: true }),
+              (error) => callback?.({ error: error.message }));
           } else if (message.action === 'save-ui-state') {
             mocks.saveUiState(message.state);
           } else if (message.action === 'get-ui-state') {
             callback({ sourceText: '', selectedLevel: 'A' });
+          } else if (message.action === 'open-settings') {
+            callback({ ok: true });
           }
         }),
         openOptionsPage: vi.fn()
@@ -86,6 +91,10 @@ for (const mode of ['sidepanel', 'floating']) {
 
     afterEach(() => {
       vi.useRealTimers();
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      else delete navigator.clipboard;
+      if (execCommandDescriptor) Object.defineProperty(document, 'execCommand', execCommandDescriptor);
+      else delete document.execCommand;
     });
 
     test('locks before settings load and sends only one request for rapid Enter presses', async () => {
@@ -206,6 +215,108 @@ for (const mode of ['sidepanel', 'floating']) {
     });
 
     if (mode === 'floating') {
+      test('opens settings through the service worker when the content script lacks openOptionsPage', () => {
+        delete chrome.runtime.openOptionsPage;
+        document.getElementById('tn-settings').click();
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ action: 'open-settings' }, expect.any(Function));
+      });
+
+      test.each(['get-settings', 'get-ui-state', 'get-notes', 'open-settings'])('shows a %s service-worker failure', async (action) => {
+        const sendMessage = chrome.runtime.sendMessage.getMockImplementation();
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+          if (message.action === action) callback({ error: 'Service worker request failed.' });
+          else return sendMessage(message, callback);
+        });
+        if (action === 'get-settings') generate.click();
+        else if (action === 'get-ui-state') showPanel({ action: 'show-panel' });
+        else document.getElementById(action === 'get-notes' ? 'tn-export' : 'tn-settings').click();
+        await vi.waitFor(() => expect(status.textContent).toBe('Service worker request failed.'));
+        expect(status.classList.contains('error')).toBe(true);
+        expect(generate.disabled).toBe(false);
+      });
+
+      test('saves on HTTP pages without crypto.randomUUID', async () => {
+        const descriptor = Object.getOwnPropertyDescriptor(crypto, 'randomUUID');
+        try {
+          Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: undefined });
+          generate.click();
+          await vi.waitFor(() => expect(status.textContent).toBe('Done.'));
+          expect(mocks.saveNote).toHaveBeenCalledWith(expect.objectContaining({ sourceText: '北京' }));
+        } finally {
+          if (descriptor) Object.defineProperty(crypto, 'randomUUID', descriptor);
+          else delete crypto.randomUUID;
+        }
+      });
+
+      test('waits for durable save confirmation before reporting success', async () => {
+        const pending = deferred();
+        mocks.saveNote.mockReturnValueOnce(pending.promise);
+        generate.click();
+        await vi.waitFor(() => expect(mocks.saveNote).toHaveBeenCalledTimes(1));
+        expect(status.textContent).toBe('Generating...');
+        expect(generate.disabled).toBe(true);
+        pending.resolve();
+        await vi.waitFor(() => expect(status.textContent).toBe('Done.'));
+        expect(generate.disabled).toBe(false);
+      });
+
+      test('reports storage failure and keeps the generated text available to copy', async () => {
+        mocks.saveNote.mockRejectedValueOnce(new Error('Storage quota exceeded.'));
+        generate.click();
+        await vi.waitFor(() => expect(status.textContent).toContain('Storage quota exceeded.'));
+        expect(status.classList.contains('error')).toBe(true);
+        expect(document.getElementById('tn-line2').value).toBe(note.line2);
+        expect(document.getElementById('tn-line3').value).toBe(note.line3);
+        expect(generate.disabled).toBe(false);
+      });
+
+      test.each(['disconnected', 'empty-response'])('reports a %s save acknowledgement', async (failure) => {
+        const sendMessage = chrome.runtime.sendMessage.getMockImplementation();
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+          if (message.action !== 'save-note') return sendMessage(message, callback);
+          if (failure === 'disconnected') chrome.runtime.lastError = { message: 'Extension disconnected.' };
+          callback?.();
+          delete chrome.runtime.lastError;
+        });
+        generate.click();
+        await vi.waitFor(() => expect(status.classList.contains('error')).toBe(true));
+        expect(status.textContent).not.toBe('Done.');
+        expect(generate.disabled).toBe(false);
+      });
+
+      test.each(['tn-copy-l2', 'tn-copy-l3', 'tn-copy-all'])('%s copies on HTTP pages and restores focus', async (button) => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+        let copied;
+        Object.defineProperty(document, 'execCommand', { configurable: true, value: vi.fn(() => {
+          copied = document.activeElement.value;
+          return true;
+        }) });
+        document.getElementById('tn-line2').value = note.line2;
+        document.getElementById('tn-line3').value = note.line3;
+        input.focus();
+        input.setSelectionRange(0, 1);
+        document.getElementById(button).click();
+        await vi.waitFor(() => expect(status.textContent).toContain('Copied'));
+        expect(copied).toBe(button === 'tn-copy-l2' ? note.line2 : button === 'tn-copy-l3' ? note.line3
+          : `Input: 北京\nNote: ${note.line2}\nExplanation: ${note.line3}`);
+        expect(document.activeElement).toBe(input);
+        expect([input.selectionStart, input.selectionEnd]).toEqual([0, 1]);
+        expect(document.querySelectorAll('textarea')).toHaveLength(3);
+      });
+
+      test.each(['tn-copy-l2', 'tn-copy-l3', 'tn-copy-all'])('%s reports clipboard denial without losing the note', async (button) => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true,
+          value: { writeText: vi.fn().mockRejectedValue(new Error('Permission denied.')) } });
+        Object.defineProperty(document, 'execCommand', { configurable: true, value: vi.fn(() => false) });
+        document.getElementById('tn-line2').value = note.line2;
+        document.getElementById('tn-line3').value = note.line3;
+        document.getElementById(button).click();
+        await vi.waitFor(() => expect(status.textContent).toBe('Failed to copy. Select the text and copy it manually.'));
+        expect(status.classList.contains('error')).toBe(true);
+        expect(document.getElementById('tn-line2').value).toBe(note.line2);
+        expect(document.querySelectorAll('textarea')).toHaveLength(3);
+      });
+
       test('reopening the panel during generation preserves the in-flight input and level', async () => {
         const pending = deferred();
         mocks.generate.mockReturnValue(pending.promise);

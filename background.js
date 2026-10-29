@@ -6,6 +6,11 @@ function panelVisibilityKey(tabId) {
   return `panelVisible:${tabId}`;
 }
 
+function respondWith(promise, sendResponse) {
+  promise.then(sendResponse, (error) => sendResponse({ error: error.message || 'Extension request failed.' }));
+  return true;
+}
+
 chrome.tabs.onRemoved.addListener((tabId) => {
   chrome.storage.session.remove(panelVisibilityKey(tabId));
 });
@@ -13,17 +18,24 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   switch (msg.action) {
     case 'get-settings':
-      loadSettings().then(sendResponse);
-      return true;
+      return respondWith(loadSettings(), sendResponse);
     case 'get-notes':
-      loadNotes().then((notes) => sendResponse(notes));
-      return true;
+      return respondWith(loadNotes(), sendResponse);
     case 'save-note':
-      saveNote(msg.note).catch(console.error);
-      break;
-    case 'get-ui-state':
-      loadUiState().then(sendResponse);
+      (async () => {
+        try {
+          // Extension contexts have randomUUID even when the host page uses HTTP.
+          await saveNote({ ...msg.note, id: msg.note.id || crypto.randomUUID() });
+          sendResponse({ ok: true });
+        } catch (error) {
+          sendResponse({ error: error.message || 'Failed to save note.' });
+        }
+      })();
       return true;
+    case 'get-ui-state':
+      return respondWith(loadUiState(), sendResponse);
+    case 'open-settings':
+      return respondWith(chrome.runtime.openOptionsPage().then(() => ({ ok: true })), sendResponse);
     case 'save-ui-state':
       saveUiState(msg.state).catch(console.error);
       break;
