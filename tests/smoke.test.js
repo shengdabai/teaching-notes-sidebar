@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import manifest from '../manifest.json' assert { type: 'json' };
+import manifest from '../manifest.json' with { type: 'json' };
 
 const root = resolve(__dirname, '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');

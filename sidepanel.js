@@ -63,6 +63,10 @@ async function persistUiState() {
 
 function setGenerating(busy) {
   isGenerating = busy;
+  if (elements.sourceText) elements.sourceText.readOnly = busy;
+  for (const control of [elements.levelSelect, elements.resetButton]) {
+    if (control) control.disabled = busy;
+  }
   if (elements.generateButton) {
     elements.generateButton.disabled = busy;
     elements.generateButton.title = busy ? 'Generating...' : 'Press Enter to generate';
@@ -81,19 +85,21 @@ async function onGenerate() {
     return;
   }
 
-  const settings = await loadSettings();
-  if (!settings.apiKey || !settings.model) {
-    setStatus('Please configure AI settings first.', true);
-    return;
-  }
-
+  const level = selectedLevel;
+  // Lock before the first await so repeated clicks/Enter cannot start another request.
   setGenerating(true);
   setStatus('Generating...');
 
   try {
+    const settings = await loadSettings();
+    if (!settings.apiKey || !settings.model) {
+      setStatus('Please configure AI settings first.', true);
+      return;
+    }
+
     const prompt = buildPrompt({
       sourceText: trimmedSourceText,
-      level: selectedLevel
+      level
     });
     const result = await generateTeachingNote({
       provider: settings.provider || 'deepseek',
@@ -101,7 +107,7 @@ async function onGenerate() {
       model: settings.model,
       prompt,
       endpoint: settings.endpoint,
-      level: selectedLevel
+      level
     });
 
     renderLevel();
@@ -113,7 +119,7 @@ async function onGenerate() {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       sourceText: trimmedSourceText,
-      level: selectedLevel,
+      level,
       line2: result.line2,
       line3: result.line3
     });
@@ -199,6 +205,10 @@ async function onExportMd() {
 
 function bindEvents() {
   elements.levelSelect?.addEventListener('change', () => {
+    if (isGenerating) {
+      renderLevel();
+      return;
+    }
     selectedLevel = elements.levelSelect.value;
     renderLevel();
     persistUiState().catch((error) => {
@@ -218,9 +228,10 @@ function bindEvents() {
     isComposing = false;
   });
 
-  // Enter key triggers generation
+  // Enter key triggers generation. Some IMEs flag composition only on the
+  // event itself (isComposing, or the legacy keyCode 229).
   elements.sourceText?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       onGenerate();
     }
@@ -275,7 +286,11 @@ function bindEvents() {
   });
 
   // Export as Markdown
-  elements.exportNotes?.addEventListener('click', onExportMd);
+  elements.exportNotes?.addEventListener('click', () => {
+    onExportMd().catch((error) => {
+      setStatus(error.message || 'Failed to export notes.', true);
+    });
+  });
 }
 
 export async function initSidePanel() {

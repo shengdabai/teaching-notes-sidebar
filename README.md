@@ -46,14 +46,16 @@ This repository supports productized learning workflows: diagnostic input, guide
 Use the commands that match the current project state:
 
 ```bash
-npm install
+npm ci
 npm run test
 ```
 
 | Command | Purpose |
 |---|---|
-| `npm install` | Install project dependencies. |
+| `npm ci` | Install project dependencies from the lockfile. |
 | `npm run test` | vitest run |
+
+The extension has no build step. Load the repository directory as an unpacked extension; see the [Chrome debug checklist](docs/chrome-debug-checklist.md) for manual checks.
 
 ## Operating Notes
 
@@ -96,7 +98,7 @@ MIT — see the [LICENSE](LICENSE) file.
 
 > 把任意中文词句一键变成干净、分级的教学笔记 —— 拼音、英文释义、难度分层，全部在浏览器里完成。内置 9 家大模型。
 
-**[English](#-chinese-teaching-note-builder) | 中文**
+**[English](#teaching-notes-sidebar) | 中文**
 
 [![Last commit](https://img.shields.io/github/last-commit/shengdabai/teaching-notes-sidebar)](https://github.com/shengdabai/teaching-notes-sidebar/commits)
 [![Stars](https://img.shields.io/github/stars/shengdabai/teaching-notes-sidebar?style=social)](https://github.com/shengdabai/teaching-notes-sidebar/stargazers)
@@ -108,12 +110,12 @@ MIT — see the [LICENSE](LICENSE) file.
 
 ### 是什么
 
-一个 Manifest V3 的 Chrome 扩展,会在任意网页上叠加一个可拖动的浮动面板。粘贴或输入中文,选一个难度等级,大模型就会生成带拼音和英文释义的格式化教学笔记 —— 可复制,也可导出为 Markdown,笔记自动本地保存。自带 API Key 即可使用,**DeepSeek** 为默认,国内无需 VPN。
+一个 Manifest V3 的 Chrome 扩展,通过工具栏图标打开扩展自有侧边栏。粘贴或输入中文,选一个难度等级,大模型就会生成带拼音和英文释义的格式化教学笔记 —— 可复制,也可导出为 Markdown,笔记自动本地保存。自带 API Key 即可使用,**DeepSeek** 为默认,国内无需 VPN。
 
 ### ✨ 功能
 
 - **9 家大模型** —— DeepSeek(默认,免梯子)、MiniMax、GLM(智谱)、ChatGPT、Claude、Kimi(月之暗面)、Qwen(通义/DashScope)、Gemini,以及任意自定义 OpenAI 兼容端点
-- **网页内浮动面板** —— 点工具栏图标即可开关,可拖动、可缩放;另含 Chrome 侧边栏 UI
+- **Chrome 侧边栏** —— 点工具栏图标打开扩展自有界面,不向网页注入面板
 - **3 个难度等级**(拼音按词分组,而非按单个音节):
   - **A** —— 仅拼音(如 `Běijīng`)
   - **B** —— 中文 + 逐词拼音(如 `经济jīngjì 发展fāzhǎn`)
@@ -139,12 +141,12 @@ MIT — see the [LICENSE](LICENSE) file.
 2. 打开 Chrome,进入 `chrome://extensions/`
 3. 打开右上角的 **开发者模式**
 4. 点 **加载已解压的扩展程序**,选中克隆下来的 `teaching-notes-sidebar` 文件夹
-5. 固定扩展,然后在任意 `http(s)` 网页点工具栏图标开关面板
+5. 固定扩展,然后点工具栏图标打开侧边栏
 
 ### 📖 使用
 
 1. 打开扩展的 **选项** 页,为所选大模型粘贴 API Key(默认 DeepSeek)
-2. 在任意网页点工具栏图标,显示浮动面板
+2. 点工具栏图标,打开侧边栏
 3. 输入或粘贴中文,选难度(**A / B / C**),点击生成
 4. 复制到剪贴板或导出 Markdown —— 笔记也会自动本地保存
 
