@@ -228,9 +228,10 @@ function bindEvents() {
     isComposing = false;
   });
 
-  // Enter key triggers generation
+  // Enter key triggers generation. Some IMEs flag composition only on the
+  // event itself (isComposing, or the legacy keyCode 229).
   elements.sourceText?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       onGenerate();
     }

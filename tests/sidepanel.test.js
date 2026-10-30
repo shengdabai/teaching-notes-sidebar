@@ -138,6 +138,32 @@ describe('side panel interactions', () => {
     });
   });
 
+  test.each([
+    ['KeyboardEvent.isComposing', { isComposing: true }],
+    ['legacy IME keyCode 229', { keyCode: 229 }]
+  ])('does not generate when Enter confirms IME composition (%s)', async (_label, imeInit) => {
+    const { initSidePanel } = await import('../sidepanel.js');
+    await initSidePanel();
+    const source = document.querySelector('#source-text');
+    source.value = '经济发展';
+
+    // Some IMEs report composition only on the event, without compositionstart.
+    const imeEnter = new KeyboardEvent('keydown', {
+      key: 'Enter', bubbles: true, cancelable: true, ...imeInit
+    });
+    source.dispatchEvent(imeEnter);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(imeEnter.defaultPrevented).toBe(false);
+    expect(mockGenerateTeachingNote).not.toHaveBeenCalled();
+    expect(document.querySelector('#generate-button').disabled).toBe(false);
+
+    source.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await vi.waitFor(() => {
+      expect(mockGenerateTeachingNote).toHaveBeenCalledTimes(1);
+    });
+  });
+
   test('locks generation before settings resolve and ignores repeated Enter', async () => {
     const { initSidePanel } = await import('../sidepanel.js');
     await initSidePanel();
